@@ -17,7 +17,11 @@
     dest: "/opt/nso/releases"
     mode: '0755'
   with_items: "{{ nso_neds }}"
-
+- name: Remove old NSO version
+  file:
+    path: "/opt/nso/releases/nso-{{ nso_version}}"
+    state: absent
+  ignore_errors: true
 - name: Extract and Install NSO
   command:
     chdir: "/opt/nso/releases"
@@ -25,6 +29,11 @@
   with_items:
     - "/opt/nso/releases/nso-{{ nso_version }}.linux.x86_64.signed.bin"
     - "/opt/nso/releases/nso-{{ nso_version }}.linux.x86_64.installer.bin /opt/nso/releases/nso-{{ nso_version }}"
+- name: Extract NEDs
+  command:
+    chdir: "/opt/nso/releases"
+    cmd: "/opt/nso/releases/ncs-{{ nso_major_version }}-{{ item.name }}-{{ item.version }}.signed.bin"
+  with_items: "{{ nso_neds }}"
 # - name: Remove default NEDs
 - name: Unpack NEDs
   unarchive:
@@ -34,16 +43,20 @@
     creates: "/opt/nso/releases/nso-{{ nso_version }}/packages/neds/{{ item.name }}-cli-{{ item.version }}"
   with_items: "{{ nso_neds }}"
 - name: NEDs setup
-  shell: "source /opt/nso/releases/{{ nso_version }}/ncsrc; /opt/nso/releases/{{ nso_version }}/bin/ncs-setup --dest /opt/nso/run"
+  shell:
+    cmd: |
+      source /opt/nso/releases/nso-{{ nso_version }}/ncsrc
+      /opt/nso/releases/nso-{{ nso_version }}/bin/ncs-setup --dest /opt/nso/run
 - name: Make NEDs current symlink live
   file:
-    src: "/opt/nso/releases/nso-{{ nso_version }}/packages/neds/{{ item.name }}-cli-{{ item.version }}"
-    dest: "/opt/nso/run/{{ item.name }}-cli-{{ item.version }}"
+    src: "/opt/nso/releases/nso-{{ nso_version }}/packages/neds/{{ item.name }}-cli-{{ item.version | regex_replace('^([0-9]+\\.[0-9]+)(\\.[0-9]+)?$', '\\1') }}"
+    dest: "/opt/nso/run/{{ item.name }}-cli-{{ item.version | regex_replace('^([0-9]+\\.[0-9]+)(\\.[0-9]+)?$', '\\1') }}"
     state: link
+  with_items: "{{ nso_neds }}"
 - name: Restart NEDs
   shell:
     chdir: "/opt/nso/run"
-    cmd: "source /opt/nso/releases/{{ nso_version }}/ncsrc; /opt/nso/run/{{ nso_version }}/bin/ncs --with-package-reload-force"
+    cmd: "source /opt/nso/releases/nso-{{ nso_version }}/ncsrc; /opt/nso/releases/nso-{{ nso_version }}/bin/ncs --with-package-reload-force"
 - name: Make NSO current symlink live
   file:
     src: "/opt/nso/releases/nso-{{ nso_version }}"
