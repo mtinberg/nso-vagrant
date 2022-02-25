@@ -10,10 +10,12 @@
   copy:
     src: "nso-{{ nso_version }}.linux.x86_64.signed.bin"
     dest: "/opt/nso/releases"
+    mode: '0755'
 - name: Copy NEDs
   copy:
     src: "ncs-{{ nso_major_version }}-{{ item.name }}-{{ item.version }}.signed.bin"
     dest: "/opt/nso/releases"
+    mode: '0755'
   with_items: "{{ nso_neds }}"
 
 - name: Extract and Install NSO
