@@ -64,5 +64,5 @@
     state: link
 - name:
   debug:
-    msg: "All Done.  Login with vagrant ssh then use ncs_cli -C -u admin to login to NSO"
+    msg: "All Done.  Login with  vagrant ssh -c 'source /opt/nso/current/ncsrc; ncs_cli -C -u admin' to access NSO CLI"
 
