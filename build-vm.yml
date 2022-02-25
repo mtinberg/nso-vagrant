@@ -1,11 +1,21 @@
 ---
 - hosts: all
-  connection: paramiko
+  connection: local
   become: yes
 
   vars:
-    nso_install_location: "/home/{{ ansible_ssh_user }}/nso-install"
-    nso_version: "5.3"
+    nso_install_location: "/opt/nso/"
+    nso_version: "5.7.1"
+    nso_major_version: "5.7"
+    nso_neds:
+      - name: cisco-asa
+        version: "6.13.12"
+      - name: cisco-ios
+        version: "6.77.10"
+      - name: cisco-iosxr
+        version: "7.38.3"
+      - name: cisco-nx
+        version: "5.22.8"
     # for example for nso-5.2.1.linux.x86_64.installer.bin nso_version is "5.2.1"
     user: vagrant
 

@@ -1,76 +1,53 @@
 ---
+- name: Create /opt/nso
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - "/opt/nso/releases"
+    - "/opt/nso/run"
+- name: Copy NSO
+  copy:
+    src: "nso-{{ nso_version }}.linux.x86_64.signed.bin"
+    dest: "/opt/nso/releases"
+- name: Copy NEDs
+  copy:
+    src: "ncs-{{ nso_major_version }}-{{ item.name }}-{{ item.version }}.signed.bin"
+    dest: "/opt/nso/releases"
+  with_items: "{{ nso_neds }}"
 
-    - name: Get List of ned filenames
-      shell: "ls files | grep ncs-*"
-      become: false
-      delegate_to: localhost
-      register: ned_list_raw
-    
-    - name: View List of NEDs from Files directory
-      debug: var=ned_list_raw
+- name: Extract and Install NSO
+  command:
+    chdir: "/opt/nso/releases"
+    cmd: "{{ item }}"
+  with_items:
+    - "/opt/nso/releases/nso-{{ nso_version }}.linux.x86_64.signed.bin"
+    - "/opt/nso/releases/nso-{{ nso_version }}.linux.x86_64.installer.bin /opt/nso/releases/nso-{{ nso_version }}"
+# - name: Remove default NEDs
+- name: Unpack NEDs
+  unarchive:
+    src: "/opt/nso/releases/ncs-{{ nso_major_version }}-{{ item.name }}-{{ item.version }}.tar.gz"
+    dest: "/opt/nso/releases/nso-{{ nso_version }}/packages/neds/"
+    remote_src: yes
+    creates: "/opt/nso/releases/nso-{{ nso_version }}/packages/neds/{{ item.name }}-cli-{{ item.version }}"
+  with_items: "{{ nso_neds }}"
+- name: NEDs setup
+  shell: "source /opt/nso/releases/{{ nso_version }}/ncsrc; /opt/nso/releases/{{ nso_version }}/bin/ncs-setup --dest /opt/nso/run"
+- name: Make NEDs current symlink live
+  file:
+    src: "/opt/nso/releases/nso-{{ nso_version }}/packages/neds/{{ item.name }}-cli-{{ item.version }}"
+    dest: "/opt/nso/run/{{ item.name }}-cli-{{ item.version }}"
+    state: link
+- name: Restart NEDs
+  shell:
+    chdir: "/opt/nso/run"
+    cmd: "source /opt/nso/releases/{{ nso_version }}/ncsrc; /opt/nso/run/{{ nso_version }}/bin/ncs --with-package-reload-force"
+- name: Make NSO current symlink live
+  file:
+    src: "/opt/nso/releases/nso-{{ nso_version }}"
+    dest: "/opt/nso/current"
+    state: link
+- name:
+  debug:
+    msg: "All Done.  Login with vagrant ssh then use ncs_cli -C -u admin to login to NSO"
 
-    - name: Create List of ned names
-      set_fact:
-        ned_list: "{{ ned_list_raw.stdout_lines }}"
-
-    - name: Copy NED Installers
-      become_user: "{{ user }}"
-      copy: src={{ item }} dest=/home/{{ user }} owner={{ user }} group={{ user }}
-      loop: "{{ ned_list }}"
-
-    - name: Create nso install Directory
-      become_user: "{{ user }}"
-      file: path=/home/{{ user }}/nso-install state=directory owner={{ user }} group={{ user }}
-
-    - name: Copy nso Installer
-      become_user: "{{ user }}"
-      copy: src=./files/nso-{{ nso_version }}.linux.x86_64.signed.bin dest=/home/{{ user }} owner={{ user }} group={{ user }}
-
-    - name: Extract Installer Bin from Signed Bin
-      command: "sh /home/{{ user }}/nso-{{ nso_version }}.linux.x86_64.signed.bin"
-      become_user: "{{ user }}"
-      ignore_errors: yes
- 
-    - name: Extract NED Tar from Signed Bin
-      command: "sh /home/{{ user }}/{{ item }}"
-      become_user: "{{ user }}"
-      ignore_errors: yes
-      loop: "{{ ned_list }}"
-
-    - name: Get List of ned tar filenames
-      shell: "rm *.tar.gz.signature"
-
-    - name: Get List of ned tar filenames
-      shell: "ls /home/{{ user }} | grep -e .*tar.gz"
-      register: ned_list_tar_raw
-
-    - name: Set Fact List of ned names
-      set_fact:
-        ned_list_tar: "{{ ned_list_tar_raw.stdout_lines }}"
-
-    - name: Extract NEDs from tar.gz
-      command: "tar xf /home/{{ user }}/{{ item }}"
-      become_user: "{{ user }}"
-      ignore_errors: yes
-      register: nso_install
-      loop: "{{ ned_list_tar }}"
-      
-    - name: INSTALL NSO 
-      command: "sh /home/{{ user }}/nso-{{ nso_version }}.linux.x86_64.installer.bin /home/{{ user }}/nso-install"
-      become_user: "{{ user }}"
-      ignore_errors: yes
-      register: nso_install
-
-    - name: DEBUG nso INSTALL
-      debug:
-       var: nso_install
-
-    - name: Remove nso Installer
-      become_user: "{{ user }}"
-      file: 
-        path: /home/{{ user }}/nso-{{ nso_version }}.linux.x86_64.installer.bin
-        state: absent 
-
-    - name: Create nso run Directory
-      become_user: "{{ user }}"
-      file: path=/home/{{ user }}/nso-run state=directory owner={{ user }} group={{ user }}

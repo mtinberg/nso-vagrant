@@ -1,39 +1,65 @@
 ---
+- name: enable doit-ns repos
+  yum_repository:
+    name: "{{ item.name }}"
+    description: DoIT Network Services Packages for Enterprise Linux
+    baseurl: "{{ item.baseurl }}"
+    metadata_expire: "1"
+    gpgcheck: no
+    repo_gpgcheck: no
+    file: doit-ns
+  with_items:
+    - name: doit-ns
+      baseurl: https://www.net.wisc.edu/yum/ns/centos/$releasever/
+    - name: doit-ns-extras
+      baseurl: https://www.net.wisc.edu/yum/3rdparty/centos/$releasever/
+    - name: doit-ns-testing
+      baseurl: https://www.net.wisc.edu/yum/ns-testing/centos/$releasever/
+- name: enable 3rdparty repos
+  yum:
+    name:
+      - epel-release
+      - pgdg-redhat-repo
+    state: latest
+    disable_gpg_check: yes
+- name: Add CentOS Software Collections YUM Repo
+  when: "ansible_distribution == 'CentOS'"
+  yum:
+    name:
+      - dnf
+      - centos-release-scl
+- name: INSTALL PACKAGES
+  yum:
+    update_cache: yes
+    state: present
+    name:
+    - git
+    - tree
+    - traceroute
+    - python3
+    - python3-pip
+    - python3-setuptools
+    - python3-devel
+    - libxml2-devel
+    - libxslt-devel
+    - zlib-devel
+    - vim
+    - openssl-devel
+    - libffi-devel
+    - libxml2
+    - rh-java-common-ant
+    # - java-1.8.0-openjdk
+    - java-1.8.0-openjdk-headless
+    # - java-11-openjdk
+    # - java-latest-openjdk
 
-      - name: Copy .bashrc
-        copy: src=./files/bashrc dest=/home/{{ user }}/.bashrc owner={{ user }} group={{ user }}
 
-      - name: INSTALL APT PACKAGES
-        apt: name={{ item }} update_cache=true
-        with_items:
-          - software-properties-common
-          - git
-          - tree
-          - traceroute
-          - python-dev
-          - python-pip
-          - python3
-          - python3-pip
-          - libxml2-dev
-          - libxslt1-dev
-          - zlib1g-dev
-          - vim
-          - libssl-dev
-          - libffi-dev
-          - fonts-inconsolata
-          - python-setuptools
-          - libxml2-utils
-          - xsltproc
-          - ant
-          - default-jdk
-
-
-      - name: INSTALL PIP PACKAGES
-        pip: name={{ item }} executable=/usr/bin/pip state=latest
-        with_items:
-          - requests
-          - virtualenv
-          - virtualenvwrapper
+# - name: INSTALL PIP PACKAGES
+#   pip: name={{ item }} executable=/usr/bin/pip state=latest
+#   with_items:
+#     - requests
+#     - virtualenv
+#     - virtualenvwrapper
 
 
 
