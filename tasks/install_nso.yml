@@ -22,6 +22,39 @@
     path: "/opt/nso/releases/nso-{{ nso_version}}"
     state: absent
   ignore_errors: true
+  # Install system wide to get init.d startup script and run as non-root user
+  #   This is the NCS installation script.
+
+  # Usage: ./nso-5.7.1.linux.x86_64.installer.bin [--local-install] LocalInstallDir
+
+  # Installs NCS in the LocalInstallDir directory only.
+  # This is convenient for test and development purposes.
+
+  # Usage: ./nso-5.7.1.linux.x86_64.installer.bin --system-install [--install-dir InstallDir]
+  #        [--config-dir ConfigDir] [--run-dir RunDir] [--log-dir LogDir]
+  #        [--run-as-user User] [--keep-ncs-setup] [--non-interactive]
+
+  # Does a system install of NCS, suitable for deployment.
+  # Static files are installed in InstallDir/ncs-<vsn>.
+  # The first time --system-install is used, the ConfigDir,
+  # RunDir, and LogDir directories are also created and
+  # populated for config files, run-time state files, and log files,
+  # respectively, and an init script for start of NCS at system boot
+  # and user profile scripts are installed. Defaults are:
+
+  #    InstallDir - /opt/ncs
+  #    ConfigDir  - /etc/ncs
+  #    RunDir     - /var/opt/ncs
+  #    LogDir     - /var/log/ncs
+
+  # By default, the system install will run NCS as the root user.
+  # If the --run-as-user option is given, the system install will
+  # instead run NCS as the given user. The user will be created if
+  # it does not already exist.
+
+  # If the --non-interactive option is given, the installer will
+  # proceed with potentially disruptive changes (e.g. modifying or
+  # removing existing files) without asking for confirmation.
 - name: Extract and Install NSO
   command:
     chdir: "/opt/nso/releases"
@@ -50,7 +83,7 @@
 - name: Make NEDs current symlink live
   file:
     src: "/opt/nso/releases/nso-{{ nso_version }}/packages/neds/{{ item.name }}-cli-{{ item.version | regex_replace('^([0-9]+\\.[0-9]+)(\\.[0-9]+)?$', '\\1') }}"
-    dest: "/opt/nso/run/{{ item.name }}-cli-{{ item.version | regex_replace('^([0-9]+\\.[0-9]+)(\\.[0-9]+)?$', '\\1') }}"
+    dest: "/opt/nso/run/packages/{{ item.name }}-cli-{{ item.version | regex_replace('^([0-9]+\\.[0-9]+)(\\.[0-9]+)?$', '\\1') }}"
     state: link
   with_items: "{{ nso_neds }}"
 - name: Restart NEDs
